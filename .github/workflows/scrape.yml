@@ -27,16 +27,29 @@ jobs:
         env:
           IBM_TOKEN: ${{ secrets.IBM_TOKEN }}
         run: |
-          end=$((SECONDS+240))
+          echo "=== Starting minute-by-minute calibration scraping loop ==="
+          for i in {1..5}; do
+            start=$(date +%s)
+            echo "[INFO] Starting scrape at $timestamp..."
+            timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
+            export TS="$timestamp"
+  
+            python scripts/scrape.py
 
-          timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
-          export TS="$timestamp"
-
-          python scripts/scrape.py
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add data/qubits/*.json
-          git add data/gates/*.json
-          git commit -m "Add calibration snapshot $timestamp" || true
-          git push
+            echo "[INFO] Finished Python scrape. Committing file..."
+            
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add data/qubits/*.json
+            git add data/gates/*.json
+            git commit -m "Add calibration snapshot $timestamp" || true
+            git push
+  
+            end=$(date +%s)
+            elapsed=$((end - start))
+            sleep_time=$((60 - elapsed))
+            if [ $sleep_time -gt 0 ]; then
+              echo "[INFO] Waiting seconds before next scrape..."
+              sleep $sleep_time
+            fi
+          done
