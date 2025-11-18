@@ -2,7 +2,7 @@ name: Quantum Calibration Scraper
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # GitHub minimum interval
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -30,12 +30,13 @@ jobs:
         run: |
           end=$((SECONDS+240))  # loop ~4 minutes
           while [ $SECONDS -lt $end ]; do
-
               timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
 
               python - << 'EOF'
 from qiskit_ibm_runtime import QiskitRuntimeService
-import json, datetime, os
+import json, os
+
+timestamp = os.environ["timestamp"]
 
 service = QiskitRuntimeService(
     channel="ibm_quantum_platform",
@@ -61,14 +62,14 @@ for backend in service.backends(simulator=False):
                 }
             }
             data.append(entry)
-    except Exception as e:
+    except Exception:
         pass
 
-fname = f"data/calibration_{timestamp}.json"
 os.makedirs("data", exist_ok=True)
+fname = f"data/calibration_{timestamp}.json"
+
 with open(fname, "w") as f:
     json.dump(data, f, indent=2)
-
 EOF
 
               git config user.name "github-actions"
