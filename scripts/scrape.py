@@ -9,26 +9,57 @@ service = QiskitRuntimeService(
     token=token
 )
 
-data = []
+# Prepare containers
+qubit_data = []
+gate_data = []
+
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 for backend in service.backends(simulator=False):
     try:
         props = backend.properties()
+        
+        # --- Qubit data ---
         for qi in range(len(props.qubits)):
             qprops = props.qubit_property(qi)
-            entry = {
+            qubit_data.append({
                 "backend": backend.name,
-                "qubit": qi
-            }
-            for key, (value, ts_v) in qprops.items():
-                entry[key] = {
-                    "value": float(value),
-                    "timestamp": ts_v.isoformat()
-                }
-            data.append(entry)
-    except Exception:
-        pass
+                "qubit": qi,
+                "properties": {k: float(v[0]) for k, v in qprops.items()},
+                "timestamps": {k: str(v[1]) for k, v in qprops.items()},
+                "scrape_time": timestamp
+            })
+        
+        # --- Gate data ---
+        for gate in props.gates:
+            gate_id = gate.gate
+            gate_qubits = gate.qubits
+            gprops = props.gate_property(gate=gate_id, qubits=gate_qubits)
+            gate_data.append({
+                "backend": backend.name,
+                "gate": gate_id,
+                "qubits": gate_qubits,
+                "properties": {k: float(v[0]) for k, v in gprops.items()},
+                "timestamps": {k: str(v[1]) for k, v in gprops.items()},
+                "scrape_time": timestamp
+            })
 
+    except Exception as e:
+        print(f"Skipped backend {backend.name}: {e}")
+
+# Save JSON files
 os.makedirs("data", exist_ok=True)
-with open(f"data/calibration_{ts}.json", "w") as f:
-    json.dump(data, f, indent=2)
+os.makedirs("data/qubits", exist_ok=True)
+os.makedirs("data/gates", exist_ok=True)
+
+qubit_file = f"data/qubits/qubits_{timestamp}.json"
+gate_file = f"data/gates/gates_{timestamp}.json"
+
+with open(qubit_file, "w") as f:
+    json.dump(qubit_data, f, indent=2)
+
+with open(gate_file, "w") as f:
+    json.dump(gate_data, f, indent=2)
+
+print(f"Saved {len(qubit_data)} qubit entries to {qubit_file}")
+print(f"Saved {len(gate_data)} gate entries to {gate_file}")
