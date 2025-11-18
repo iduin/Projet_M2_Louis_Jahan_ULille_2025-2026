@@ -13,8 +13,6 @@ service = QiskitRuntimeService(
 qubit_data = []
 gate_data = []
 
-timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
 for backend in service.backends(simulator=False):
     try:
         props = backend.properties()
@@ -52,8 +50,8 @@ os.makedirs("data", exist_ok=True)
 os.makedirs("data/qubits", exist_ok=True)
 os.makedirs("data/gates", exist_ok=True)
 
-qubit_file = f"data/qubits/qubits_{timestamp}.json"
-gate_file = f"data/gates/gates_{timestamp}.json"
+qubit_file = f"data/qubits/qubits_{ts}.json"
+gate_file = f"data/gates/gates_{ts}.json"
 
 with open(qubit_file, "w") as f:
     json.dump(qubit_data, f, indent=2)
