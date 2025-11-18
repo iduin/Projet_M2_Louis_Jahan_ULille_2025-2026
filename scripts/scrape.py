@@ -13,7 +13,10 @@ service = QiskitRuntimeService(
 qubit_data = []
 gate_data = []
 
+print("[PY] Starting scrape...")
+
 for backend in service.backends(simulator=False):
+    print(f"[PY] Processing backend {backend.name}")
     try:
         props = backend.properties()
         
@@ -25,7 +28,7 @@ for backend in service.backends(simulator=False):
                 "qubit": qi,
                 "properties": {k: float(v[0]) for k, v in qprops.items()},
                 "timestamps": {k: str(v[1]) for k, v in qprops.items()},
-                "scrape_time": timestamp
+                "scrape_time": ts
             })
         
         # --- Gate data ---
@@ -39,7 +42,7 @@ for backend in service.backends(simulator=False):
                 "qubits": gate_qubits,
                 "properties": {k: float(v[0]) for k, v in gprops.items()},
                 "timestamps": {k: str(v[1]) for k, v in gprops.items()},
-                "scrape_time": timestamp
+                "scrape_time": ts
             })
 
     except Exception as e:
@@ -59,5 +62,5 @@ with open(qubit_file, "w") as f:
 with open(gate_file, "w") as f:
     json.dump(gate_data, f, indent=2)
 
-print(f"Saved {len(qubit_data)} qubit entries to {qubit_file}")
-print(f"Saved {len(gate_data)} gate entries to {gate_file}")
+print(f"[PY] Saved {len(qubit_data)} qubit entries to {qubit_file}")
+print(f"[PY] Saved {len(gate_data)} gate entries to {gate_file}")
