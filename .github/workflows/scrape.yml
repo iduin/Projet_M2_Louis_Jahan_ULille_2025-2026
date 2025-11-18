@@ -30,8 +30,8 @@ jobs:
           echo "=== Starting minute-by-minute calibration scraping loop ==="
           for i in {1..5}; do
             start=$(date +%s)
-            echo "[INFO] Starting scrape at $timestamp..."
             timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
+            echo "[INFO] Starting scrape at $timestamp..."
             export TS="$timestamp"
   
             python scripts/scrape.py
@@ -49,7 +49,7 @@ jobs:
             elapsed=$((end - start))
             sleep_time=$((60 - elapsed))
             if [ $sleep_time -gt 0 ]; then
-              echo "[INFO] Waiting seconds before next scrape..."
+              echo "[INFO] Waiting $sleep_time seconds before next scrape..."
               sleep $sleep_time
             fi
           done
