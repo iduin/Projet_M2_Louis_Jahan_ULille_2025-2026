@@ -9,10 +9,6 @@ on:
     - cron: "* * * * *"
   workflow_dispatch:
 
-notifications:
-  email:
-    on_cancellation: never
-
 permissions:
   contents: write
 
