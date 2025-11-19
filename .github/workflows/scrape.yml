@@ -1,8 +1,12 @@
 name: Quantum Calibration Scraper
 
+concurrency:
+  group: scraper
+  cancel-in-progress: true
+
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
   workflow_dispatch:
 
 permissions:
@@ -28,7 +32,7 @@ jobs:
           IBM_TOKEN: ${{ secrets.IBM_TOKEN }}
         run: |
           echo "=== Starting minute-by-minute calibration scraping loop ==="
-          for i in {1..5}; do
+          for i in {1..50}; do
             start=$(date +%s)
             timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
             echo "[INFO] Starting scrape at $timestamp..."
@@ -40,8 +44,7 @@ jobs:
             
             git config user.name "github-actions"
             git config user.email "github-actions@github.com"
-            git add data/qubits/*.json
-            git add data/gates/*.json
+            git add data/**/*.json
             git commit -m "Add calibration snapshot $timestamp" || true
             git push
   
