@@ -1,0 +1,40 @@
+name: Merge Calibration Files (Hourly)
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # every hour at minute 0
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --quiet 'ujson'
+
+      - name: Merge JSON files
+        run: |
+          echo "Merging qubits and gates..."
+
+          mkdir -p merged
+
+          python scripts/merge.py
+
+      - name: Commit merged data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add merged/*.json
+          git commit -m "Hourly merged calibration datasets" || echo "No changes"
+          git push
