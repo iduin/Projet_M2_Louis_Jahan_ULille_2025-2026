@@ -17,12 +17,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clean up runner disk
+      - name: Clean up runner disk safely
         run: |
           echo "[INFO] Cleaning temporary files and pip cache..."
-          sudo rm -rf /home/runner/actions-runner/cached/*
           sudo rm -rf ~/.cache/pip
           sudo rm -rf /tmp/*
+          # Only delete your workflow logs, NOT system directories
+          rm -rf /home/runner/work/_temp/*
+
           
       - uses: actions/checkout@v4
 
