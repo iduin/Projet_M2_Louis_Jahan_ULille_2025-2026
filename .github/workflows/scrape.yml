@@ -17,6 +17,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean up runner disk safely
+        run: |
+          echo "[INFO] Cleaning temporary files and pip cache..."
+          sudo rm -rf ~/.cache/pip
+          sudo rm -rf /tmp/*
+          # Only delete your workflow logs, NOT system directories
+          rm -rf /home/runner/work/_temp/*
+          
       - uses: actions/checkout@v4
 
       - name: Set up Python
@@ -25,7 +33,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install qiskit-ibm-runtime
+        run: pip install --no-cache-dir qiskit-ibm-runtime
 
       - name: Run calibration scrape
         env:
