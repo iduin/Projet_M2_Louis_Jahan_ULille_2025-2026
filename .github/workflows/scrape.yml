@@ -17,6 +17,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Clean up runner disk
+        run: |
+          echo "[INFO] Cleaning temporary files and pip cache..."
+          sudo rm -rf /home/runner/actions-runner/cached/*
+          sudo rm -rf ~/.cache/pip
+          sudo rm -rf /tmp/*
+          
       - uses: actions/checkout@v4
 
       - name: Set up Python
