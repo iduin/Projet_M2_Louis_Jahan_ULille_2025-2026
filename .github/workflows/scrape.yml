@@ -34,7 +34,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install qiskit-ibm-runtime
+        run: pip install --no-cache-dir qiskit-ibm-runtime
 
       - name: Run calibration scrape
         env:
