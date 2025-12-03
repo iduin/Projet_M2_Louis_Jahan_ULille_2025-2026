@@ -1,7 +1,6 @@
 import os
 import ujson
 import pandas as pd
-from tqdm import tqdm
 from copy import deepcopy
 
 def normalize_qubit_data(data):
@@ -29,7 +28,7 @@ def remove_non_unique_json_files(directory, normalize_fn):
     files_deleted = 0
 
     # Files are already named like qubits_YYYY-MM-DD_HH-MM-SS.json → sorting works
-    for fname in tqdm(sorted(os.listdir(directory))):
+    for fname in sorted(os.listdir(directory)):
         if not fname.endswith(".json"):
             continue
         
@@ -72,7 +71,7 @@ def load_json_to_dataframe(directory):
     if not os.path.isdir(directory):
         return pd.DataFrame()
 
-    for fname in tqdm(sorted(os.listdir(directory))):
+    for fname in sorted(os.listdir(directory)):
         if fname.endswith(".json"):
             path = os.path.join(directory, fname)
             try:
