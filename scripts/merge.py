@@ -119,9 +119,12 @@ def df_to_json(df, raw, output_file):
     print(f"Merged {len(unique_entries)} unique entries (removed duplicates)")
 
 def merge_jsons(directory, output_file):
-    remove_non_unique_json_files(directory)
+    remove_non_unique_json_files(directory,normalize_qubit_data)
     df, raw = load_json_to_dataframe(directory)
     df_to_json(df, raw, output_file)
+
+
+os.makedirs("data/merged", exist_ok=True)
 
 # ---------- Merge QUBITS ----------
 qubits_dir = "data/qubits"
