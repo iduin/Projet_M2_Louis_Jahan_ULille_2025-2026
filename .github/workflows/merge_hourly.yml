@@ -1,8 +1,8 @@
-name: Merge Calibration Files (Hourly) 
+name: Merge Calibration Files (Hourly)
 
 on:
   schedule:
-    - cron: "0 * * * *"   # every hour at minute 0
+    - cron: "0 * * * *"  # every hour at minute 0
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # allows push back
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,18 +25,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --no-cache-dir --quiet 'ujson'
-          pip install --no-cache-dir --quiet 'pandas'
-          pip install --no-cache-dir --quiet 'tqdm'
-          pip install --no-cache-dir --quiet 'copy'
-          
+          pip install --no-cache-dir --quiet ujson pandas tqdm
 
       - name: Merge JSON files
         run: |
           echo "Merging qubits and gates..."
-
           mkdir -p merged
-
           python scripts/merge.py
 
       - name: Commit merged data
@@ -41,5 +38,5 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add merged/*.json
-          git commit -m "Hourly merged calibration datasets" || echo "No changes"
+          git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
           git push
