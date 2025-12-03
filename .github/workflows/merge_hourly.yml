@@ -37,7 +37,16 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
+          # Pull latest changes first
+          git fetch origin main
+          git reset --hard origin/main
+
+          # Stage changes
           git add data/merged/*.json
+
+          # Commit if there are changes
           git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
-          git pull --rebase origin main  # integrate any new commits
-          git push
+
+          # Push
+          git push origin main
