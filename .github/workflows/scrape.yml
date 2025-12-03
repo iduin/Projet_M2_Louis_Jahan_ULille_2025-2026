@@ -24,7 +24,6 @@ jobs:
           sudo rm -rf /tmp/*
           # Only delete your workflow logs, NOT system directories
           rm -rf /home/runner/work/_temp/*
-
           
       - uses: actions/checkout@v4
 
