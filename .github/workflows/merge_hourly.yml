@@ -1,4 +1,4 @@
-name: Merge Calibration Files (Hourly)
+name: Merge Calibration Files (Hourly) 
 
 on:
   schedule:
