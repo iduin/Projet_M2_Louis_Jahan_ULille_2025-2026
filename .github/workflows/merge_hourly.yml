@@ -21,7 +21,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install --quiet 'ujson'
+        run: |
+          pip install --no-cache-dir --quiet 'ujson'
+          pip install --no-cache-dir --quiet 'pandas'
+          pip install --no-cache-dir --quiet 'tqdm'
+          pip install --no-cache-dir --quiet 'copy'
+          
 
       - name: Merge JSON files
         run: |
