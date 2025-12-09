@@ -27,26 +27,28 @@ jobs:
         run: |
           pip install --no-cache-dir --quiet ujson pandas tqdm
 
+      - name: Ensure merged directory exists
+        run: mkdir -p data/merged
+
       - name: Merge JSON files
         run: |
           echo "Merging qubits and gates..."
-          mkdir -p merged
           python scripts/merge.py
 
-      - name: Commit merged data
+      - name: Commit and push merged data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          # Pull latest changes first
+          # Fetch latest main and reset local branch to match
           git fetch origin main
           git reset --hard origin/main
 
-          # Stage changes
+          # Stage merged JSON files
           git add data/merged/*.json
 
-          # Commit if there are changes
+          # Commit only if there are changes
           git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
 
-          # Push
+          # Push changes
           git push origin main
