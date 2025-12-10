@@ -29,24 +29,21 @@ jobs:
 
       - name: Ensure merged directory exists
         run: mkdir -p data/merged
-      
-      - name: Sync to latest main
-        run: |
-          git fetch origin main
-          git reset --hard origin/main
 
+      - name: Fetch latest main
+        run: git fetch origin main
 
       - name: Merge JSON files
         run: |
           echo "Merging qubits and gates..."
           python scripts/merge.py
 
-      - name: Commit and push merged data
+      - name: Commit merged data
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          # Stage merged JSON files
+          # Stage deletions and merged files
           git add -u data/qubits/
           git add -u data/gates/
           git add data/merged/*.json.gz
@@ -54,5 +51,10 @@ jobs:
           # Commit only if there are changes
           git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
 
-          # Push changes
+      - name: Rebase on latest main and push
+        run: |
+          # Reapply local commit on top of latest remote main
+          git pull --rebase origin main
+
+          # Push after rebase
           git push origin main
