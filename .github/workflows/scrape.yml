@@ -54,6 +54,7 @@ jobs:
             git config user.email "github-actions@github.com"
             git add data/**/*.json
             git commit -m "Add calibration snapshot $timestamp" || true
+            git pull --rebase origin main || true
             git push
   
             end=$(date +%s)
