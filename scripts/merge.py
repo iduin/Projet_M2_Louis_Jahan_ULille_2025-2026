@@ -2,6 +2,7 @@ import os
 import ujson
 import pandas as pd
 from copy import deepcopy
+import gzip
 
 def normalize_qubit_data(data):
     """
@@ -112,7 +113,7 @@ def df_to_json(df, raw, output_file):
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    with open(output_file, "w") as f:
+    with gzip.open(output_file, "wt") as f:
         ujson.dump(unique_entries, f, indent=2)
 
     print(f"Merged {len(unique_entries)} unique entries (removed duplicates)")

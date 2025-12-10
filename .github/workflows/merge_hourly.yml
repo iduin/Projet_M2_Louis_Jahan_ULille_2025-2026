@@ -47,7 +47,7 @@ jobs:
           git config user.email "github-actions@github.com"
 
           # Stage merged JSON files
-          git add data/merged/*.json
+          git add data/merged/*.json*
 
           # Commit only if there are changes
           git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
