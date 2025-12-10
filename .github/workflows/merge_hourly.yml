@@ -47,7 +47,8 @@ jobs:
           git config user.email "github-actions@github.com"
 
           # Stage merged JSON files
-          git add data/*/*.json
+          git add -u data/qubits/
+          git add -u data/gates/
           git add data/merged/*.json.gz
 
           # Commit only if there are changes
