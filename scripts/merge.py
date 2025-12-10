@@ -128,13 +128,13 @@ os.makedirs("data/merged", exist_ok=True)
 
 # ---------- Merge QUBITS ----------
 qubits_dir = "data/qubits"
-output_file = "data/merged/qubits.json"
+output_file = "data/merged/qubits.json.gz"
 
 merge_jsons(qubits_dir, output_file)
 
 
 # ---------- Merge GATES ----------
 gates_dir = "data/gates"
-output_file = "data/merged/gates.json"
+output_file = "data/merged/gates.json.gz"
 
 merge_jsons(gates_dir, output_file)
