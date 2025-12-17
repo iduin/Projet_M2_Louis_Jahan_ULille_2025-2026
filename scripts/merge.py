@@ -91,7 +91,7 @@ def load_json_to_dataframe(directory):
     df = pd.json_normalize(all_entries)  # flatten nested dicts
     return df, all_entries
 
-def df_to_json(df, raw, output_file):
+def df_to_unique_entries(df, raw):
     if df.empty:
         print("No data")
         return
@@ -110,6 +110,10 @@ def df_to_json(df, raw, output_file):
     unique_indices = df_unique.index
     unique_entries = [raw[i] for i in unique_indices]
 
+    return unique_entries
+
+def save_to_json (unique_entries, output_file) :
+
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
@@ -118,10 +122,11 @@ def df_to_json(df, raw, output_file):
 
     print(f"Merged {len(unique_entries)} unique entries (removed duplicates)")
 
-def merge_jsons(directory, output_file):
+def merge_jsons(directory):
     remove_non_unique_json_files(directory,normalize_qubit_data)
     df, raw = load_json_to_dataframe(directory)
-    df_to_json(df, raw, output_file)
+    unique_entries = df_to_unique_entries(df, raw)
+    return unique_entries
 
 
 os.makedirs("data/merged", exist_ok=True)
@@ -130,11 +135,20 @@ os.makedirs("data/merged", exist_ok=True)
 qubits_dir = "data/qubits"
 output_file = "data/merged/qubits.json.gz"
 
-merge_jsons(qubits_dir, output_file)
+unique_entries_qubits = merge_jsons(qubits_dir)
+save_to_json (unique_entries_qubits, output_file)
 
 
 # ---------- Merge GATES ----------
 gates_dir = "data/gates"
 output_file = "data/merged/gates.json.gz"
 
-merge_jsons(gates_dir, output_file)
+unique_entries_gates = merge_jsons(gates_dir)
+save_to_json (unique_entries_gates, output_file)
+
+
+# ---------- Merge ALL ----------
+output_file = "data/merged/all.json.gz"
+
+unique_entries_all = unique_entries_qubits + unique_entries_gates
+save_to_json (unique_entries_all, output_file)
