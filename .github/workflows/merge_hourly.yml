@@ -27,15 +27,19 @@ jobs:
         run: |
           pip install --no-cache-dir --quiet ujson pandas tqdm
 
-      - name: Ensure merged directory exists
-        run: mkdir -p data/merged
+      - name: Ensure directories exist
+        run: |
+          mkdir -p data/merged
+          mkdir -p data/qubits
+          mkdir -p data/gates
 
-      - name: Fetch latest main
-        run: git fetch origin main
+      - name: Pull latest main
+        run: |
+          git pull --rebase origin main
 
       - name: Merge JSON files
         run: |
-          echo "Merging qubits and gates..."
+          echo "Running incremental merge..."
           python scripts/merge.py
 
       - name: Commit merged data
@@ -46,15 +50,36 @@ jobs:
           # Stage deletions and merged files
           git add -u data/qubits/
           git add -u data/gates/
-          git add data/merged/*.json.gz
+          git add data/merged/
 
           # Commit only if there are changes
-          git diff --cached --quiet || git commit -m "Hourly merged calibration datasets"
+          if ! git diff --cached --quiet; then
+            git commit -m "Hourly incremental calibration merge"
+          else
+            echo "No changes to commit."
+          fi
 
-      - name: Rebase on latest main and push
+      - name: Rebase and push with retry
         run: |
-          # Reapply local commit on top of latest remote main
-          git pull --rebase origin main
+          set -e
 
-          # Push after rebase
-          git push origin main
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i..."
+
+            git pull --rebase origin main
+
+            if git push origin main; then
+              echo "Push succeeded."
+              exit 0
+            fi
+
+            echo "Push failed. Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+
+          echo "Push failed after $MAX_RETRIES attempts."
+          exit 1
+
