@@ -70,7 +70,7 @@ def incremental_merge(directory, merged_file, state_file, last_path, key_func):
 
     with gzip.open(merged_file, "at") as out:
 
-        for fname in new_files :
+        for fname in tqdm(new_files) :
             path = os.path.join(directory, fname)
             with open(path) as f:
                 data = ujson.load(f)
