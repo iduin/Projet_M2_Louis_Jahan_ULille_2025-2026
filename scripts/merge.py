@@ -1,154 +1,137 @@
 import os
 import ujson
-import pandas as pd
+import json
 from copy import deepcopy
 import gzip
+from tqdm import tqdm
+import hashlib
+import shutil
 
-def normalize_qubit_data(data):
-    """
-    Remove timestamp fields from qubit/gate entries to compare content only.
-    """
-    normalized = deepcopy(data)
-    if isinstance(normalized, list):
-        for entry in normalized:
-            entry.pop("scrape_time", None)
-    elif isinstance(normalized, dict):
-        normalized.pop("scrape_time", None)
-    return normalized
+def qubit_key(e):
+    return f"{e['backend']}|{e['qubit']}"
 
-def remove_non_unique_json_files(directory, normalize_fn):
-    """
-    Remove JSON files in `directory` that are duplicates *after normalization*.
-    Files are processed in timestamp-sorted order to allow O(N) duplicate removal.
-    """
-    if not os.path.isdir(directory):
+def gate_key(e):
+    q = ",".join(map(str, e["qubits"]))
+    return f"{e['backend']}|{e['gate']}|{q}"
+
+def load_state(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return ujson.load(f)
+
+def save_state(path, state):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        ujson.dump(state, f)
+
+def load_last(path):
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return f.read().strip()
+
+def save_last(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write(value)
+
+def normalized_hash(entry):
+    e = dict(entry)
+    e.pop("scrape_time", None)
+    e.pop("timestamps", None)
+    key = json.dumps(e, sort_keys=True).encode()
+    return hashlib.sha256(key).hexdigest()
+
+
+def incremental_merge(directory, merged_file, state_file, last_path, key_func):
+
+    files = sorted(f for f in os.listdir(directory) if f.endswith(".json"))
+
+    last_file = load_last(last_path)
+
+    if last_file is None:
+        new_files = files
+    else:
+        new_files = [f for f in files if f > last_file]
+    
+    if not new_files:
+        print("No new files to process.")
         return
 
-    last_unique = None
-    files_processed = 0
-    files_deleted = 0
 
-    # Files are already named like qubits_YYYY-MM-DD_HH-MM-SS.json → sorting works
-    for fname in sorted(os.listdir(directory)):
-        if not fname.endswith(".json"):
-            continue
-        
-        path = os.path.join(directory, fname)
-        try:
+    print("Number of files to process:", len(new_files))
+
+    state = load_state(state_file)
+
+    nb_static = 0
+
+    print("Merging into:", merged_file," . . .")
+
+    with gzip.open(merged_file, "at") as out:
+
+        for fname in new_files :
+            path = os.path.join(directory, fname)
             with open(path) as f:
                 data = ujson.load(f)
-        except Exception as e:
-            print(f"Error reading {path}: {e}")
-            continue
+            
+            entries = data if isinstance(data, list) else [data]
 
-        # Normalize (remove timestamps, scrape_time, reorder keys, etc.)
-        normalized = normalize_fn(data)
+            changed = False
+            for entry in entries:
+                k = key_func(entry)
+                h = normalized_hash(entry)
 
-        if last_unique is None:
-            # First file becomes the baseline
-            last_unique = normalized
-            files_processed += 1
-            continue
+                if state.get(k) != h:
+                    state[k] = h
+                    changed = True
+                    out.write(ujson.dumps(entry))
+                    out.write("\n")
 
-        # Compare normalized structures directly
-        if normalized == last_unique:
-            # Duplicate → delete file
-            try:
+                else :
+                    nb_static += 1
+                    continue   # unchanged entity
+
+            if not changed:
                 os.remove(path)
-                files_deleted += 1
-            except Exception as e:
-                print(f"Failed to remove {path}: {e}")
-            continue
-        
-        # Update baseline
-        last_unique = normalized
-        files_processed += 1
+                
+            last_file = fname
 
-    print(f"Processed {files_processed} unique files, deleted {files_deleted} duplicates in '{directory}'")
+    save_state(state_file, state)    
+    save_last(last_path, last_file)
 
-def load_json_to_dataframe(directory):
-    all_entries = []
+def build_all_file(output_path, *inputs):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    if not os.path.isdir(directory):
-        return pd.DataFrame()
+    with gzip.open(output_path, "wb") as out:
+        for path in inputs:
+            if not os.path.exists(path):
+                continue
 
-    for fname in sorted(os.listdir(directory)):
-        if fname.endswith(".json"):
-            path = os.path.join(directory, fname)
-            try:
-                with open(path) as f:
-                    data = ujson.load(f)
-                    if isinstance(data, list):
-                        all_entries.extend(data)
-                    else:
-                        all_entries.append(data)
-            except Exception as e:
-                print(f"Error reading {path}: {e}")
+            with gzip.open(path, "rb") as src:
+                shutil.copyfileobj(src, out)
 
-    # Convert to DataFrame
-    if not all_entries:
-        return pd.DataFrame()
-    df = pd.json_normalize(all_entries)  # flatten nested dicts
-    return df, all_entries
-
-def df_to_unique_entries(df, raw):
-    if df.empty:
-        print("No data")
-        return
-
-    # Convert list-valued 'qubits' cells to string
-    if 'qubits' in df.columns:
-        df['qubits'] = df['qubits'].apply(
-            lambda x: str(x) if isinstance(x, list) else x
-        )
-
-    # Drop scrape-time columns (case-insensitive)
-    cols_to_drop = [c for c in df.columns if 'scrape_time' in c.lower()]
-    df_unique = df.drop(columns=cols_to_drop).drop_duplicates()
-
-    # Map back to raw entries using original indices
-    unique_indices = df_unique.index
-    unique_entries = [raw[i] for i in unique_indices]
-
-    return unique_entries
-
-def save_to_json (unique_entries, output_file) :
-
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    with gzip.open(output_file, "wt") as f:
-        ujson.dump(unique_entries, f, indent=2)
-
-    print(f"Merged {len(unique_entries)} unique entries (removed duplicates)")
-
-def merge_jsons(directory):
-    remove_non_unique_json_files(directory,normalize_qubit_data)
-    df, raw = load_json_to_dataframe(directory)
-    unique_entries = df_to_unique_entries(df, raw)
-    return unique_entries
+    print("Built:", output_path)
 
 
-os.makedirs("data/merged", exist_ok=True)
+gates_directory = "data/gates"
 
-# ---------- Merge QUBITS ----------
-qubits_dir = "data/qubits"
-output_file = "data/merged/qubits.json.gz"
+gates_merged_path = "data/merged/gates.json.gz"
 
-unique_entries_qubits = merge_jsons(qubits_dir)
-save_to_json (unique_entries_qubits, output_file)
+gates_state_file = "data/merged/state_gates.json"
 
-
-# ---------- Merge GATES ----------
-gates_dir = "data/gates"
-output_file = "data/merged/gates.json.gz"
-
-unique_entries_gates = merge_jsons(gates_dir)
-save_to_json (unique_entries_gates, output_file)
+gates_last_path = "data/merged/last_gates.txt"
 
 
-# ---------- Merge ALL ----------
-output_file = "data/merged/all.json.gz"
+qubits_directory = "data/qubits"
 
-unique_entries_all = unique_entries_qubits + unique_entries_gates
-save_to_json (unique_entries_all, output_file)
+qubits_merged_path = "data/merged/qubits.json.gz"
+
+qubits_state_file = "data/merged/state_qubits.json"
+
+qubits_last_path = "data/merged/last_qubits.txt"
+
+incremental_merge(gates_directory, gates_merged_path, gates_state_file, gates_last_path, gate_key)
+incremental_merge(qubits_directory, qubits_merged_path, qubits_state_file, qubits_last_path, qubit_key)
+
+build_all_file("data/merged/all_data.json.gz", gates_merged_path, qubits_merged_path)
